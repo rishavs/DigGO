@@ -8,18 +8,16 @@ import (
 	// "database/sql"
 	// _ "github.com/lib/pq"
 
-	"github.com/spf13/viper"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-    "github.com/jinzhu/gorm"
-    _ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/spf13/viper"
+
+	"./controllers"
+	"./models"
+	// "./views"
 )
-
-//------------------------------------
-// Model
-//------------------------------------
-
-
 
 //------------------------------------
 // Main
@@ -34,12 +32,14 @@ func main() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
-	if err != nil { 
-	    panic(fmt.Errorf("Fatal error config file: %s \n", err))
+	if err != nil {
+		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
 	db_uri, ok := viper.Get("PG_URL").(string)
-	if ok != true {log.Fatal(err)}
+	if ok != true {
+		log.Fatal(err)
+	}
 
 	fmt.Println(db_uri)
 
@@ -56,27 +56,12 @@ func main() {
 
 	defer db.Close()
 
-	type Post struct {
-		gorm.Model
-
-		Title string
-		Content string
-		User User
-		UserId uint
-	}
-
-	type User struct {
-	    gorm.Model
-
-	    Name string
-	}
-
-	db.Model(&post).Related(&user)
+	// Migrate the schema
+	db.AutoMigrate(&Post{})
 
 	//------------------------------------
 	// Create Server
 	//------------------------------------
-
 	e := echo.New()
 
 	//------------------------------------
@@ -88,13 +73,15 @@ func main() {
 	//------------------------------------
 	// Routes
 	//------------------------------------
+	e.GET("/p/", controllers.IndexPosts)
+	e.GET("/p/:id", controllers.GetPost)
+	e.POST("/p/:id", controllers.CreatePost)
 
-
-
+	// e.PUT("/users/:id", updateUser)
+	// e.DELETE("/users/:id", deleteUser)
 
 	//------------------------------------
 	// Start Server
 	//------------------------------------
-	// e.Logger.Fatal(e.Start(":3000"))
+	e.Logger.Fatal(e.Start(":3000"))
 }
-
